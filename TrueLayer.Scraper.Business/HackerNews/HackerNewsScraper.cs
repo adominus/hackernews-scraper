@@ -72,13 +72,10 @@ namespace TrueLayer.Scraper.Business.HackerNews
 
 		private async Task<IEnumerable<HackerNewsPost>> GetPostsAsync(int page)
 		{
-			var htmlContent = await _httpClientService.GetHtmlContentAsync(BuildUriForPage(page));
+			var htmlContent = await _httpClientService.GetHtmlContentAsync($"/news?p={page}");
 
 			return _hackerNewsHtmlParser.ParsePosts(htmlContent);
 		}
-
-		private Uri BuildUriForPage(int page)
-			=> new Uri($"https://news.ycombinator.com/news?p={page}");
 
 		private Post ToPostDomainModel(HackerNewsPost post)
 			=> new Post
@@ -88,10 +85,10 @@ namespace TrueLayer.Scraper.Business.HackerNews
 				Points = post.Points,
 				Rank = post.Rank,
 				Title = post.Title,
-				Uri = GetUriFromHref(post.Href)
+				Uri = BuildUriFromHref(post.Href)
 			};
 
-		private Uri GetUriFromHref(string href)
+		private Uri BuildUriFromHref(string href)
 		{
 			if (Uri.TryCreate(href, UriKind.Absolute, out Uri absoluteUri))
 			{

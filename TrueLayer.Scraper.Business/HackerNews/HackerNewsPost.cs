@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace TrueLayer.Scraper.Business.HackerNews
+﻿namespace TrueLayer.Scraper.Business.HackerNews
 {
 	public class HackerNewsPost
 	{

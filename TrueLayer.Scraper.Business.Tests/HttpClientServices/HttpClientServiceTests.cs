@@ -2,7 +2,6 @@
 using AutoFixture.AutoMoq;
 using NUnit.Framework;
 using RichardSzalay.MockHttp;
-using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -14,7 +13,7 @@ namespace TrueLayer.Scraper.Business.Tests.HttpClientServices
 	{
 		private IFixture _fixture;
 
-		private Uri _address;
+		private string _address;
 
 		[OneTimeSetUp]
 		public void OneTimeSetUp()
@@ -22,7 +21,7 @@ namespace TrueLayer.Scraper.Business.Tests.HttpClientServices
 			_fixture = new Fixture()
 				.Customize(new AutoMoqCustomization());
 
-			_address = _fixture.Create<Uri>();
+			_address = "http://localhost";
 		}
 
 		[Test]
@@ -30,7 +29,7 @@ namespace TrueLayer.Scraper.Business.Tests.HttpClientServices
 		{
 			// Arrange 
 			var mockHttpMessageHandler = new MockHttpMessageHandler();
-			mockHttpMessageHandler.Expect(HttpMethod.Get, _address.AbsoluteUri);
+			mockHttpMessageHandler.Expect(HttpMethod.Get, _address);
 
 			_fixture.Inject(mockHttpMessageHandler.ToHttpClient());
 
@@ -50,7 +49,7 @@ namespace TrueLayer.Scraper.Business.Tests.HttpClientServices
 			var expectedResult = _fixture.Create<string>();
 
 			var mockHttpMessageHandler = new MockHttpMessageHandler();
-			mockHttpMessageHandler.When(HttpMethod.Get, _address.AbsoluteUri)
+			mockHttpMessageHandler.When(HttpMethod.Get, _address)
 				.Respond("text/html", expectedResult);
 
 			_fixture.Inject(mockHttpMessageHandler.ToHttpClient());
@@ -69,7 +68,7 @@ namespace TrueLayer.Scraper.Business.Tests.HttpClientServices
 		{
 			// Arrange 
 			var mockHttpMessageHandler = new MockHttpMessageHandler();
-			mockHttpMessageHandler.When(HttpMethod.Get, _address.AbsoluteUri)
+			mockHttpMessageHandler.When(HttpMethod.Get, _address)
 				.Respond("application/json", "{'foo':'bar'}");
 
 			_fixture.Inject(mockHttpMessageHandler.ToHttpClient());
@@ -88,7 +87,7 @@ namespace TrueLayer.Scraper.Business.Tests.HttpClientServices
 		{
 			// Arrange 
 			var mockHttpMessageHandler = new MockHttpMessageHandler();
-			mockHttpMessageHandler.When(HttpMethod.Get, _address.AbsoluteUri)
+			mockHttpMessageHandler.When(HttpMethod.Get, _address)
 				.Respond((HttpStatusCode)(_fixture.Create<int>() + 300), "text/html", _fixture.Create<string>());
 
 			_fixture.Inject(mockHttpMessageHandler.ToHttpClient());

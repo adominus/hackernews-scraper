@@ -156,10 +156,12 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 		}
 
 		[Test]
-		public void WhenHrefIsNotValid_ShouldReturnFalse()
+		[TestCase("http://a>")]
+		[TestCase("http://<>")]
+		public void WhenHrefIsNotValid_ShouldReturnFalse(string href)
 		{
 			// Arrange
-			_post.Href = _fixture.Create<string>();
+			_post.Href = href;
 
 			// Act
 			var result = _subject.IsValid(_post);

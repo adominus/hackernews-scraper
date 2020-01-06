@@ -92,7 +92,7 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 			await subject.GetTopPostsAsync(1);
 
 			// Assert
-			_httpClientServiceMock.Verify(x => x.GetHtmlContentAsync(It.Is<Uri>(uri => IsEqualToPage(uri, 1))));
+			_httpClientServiceMock.Verify(x => x.GetHtmlContentAsync(It.Is<string>(path => IsEqualToPage(path, 1))));
 		}
 
 		[Test]
@@ -166,6 +166,24 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 		}
 
 		[Test]
+		public async Task WhenHrefIsRelative_ShouldAssumeToHackerNews()
+		{
+			// Arrange 
+			var expectedPost = _fixture.Create<HackerNewsPost>();
+			expectedPost.Href = "foo";
+			_postsPage1.RemoveAll(_ => true);
+			_postsPage1.Add(expectedPost);
+
+			var subject = _fixture.Create<HackerNewsScraper>();
+
+			// Act 
+			var result = await subject.GetTopPostsAsync(1);
+
+			// Assert
+			Assert.That(result.Single().Uri.AbsoluteUri, Is.EqualTo("https://news.ycombinator.com/foo"));
+		}
+
+		[Test]
 		public async Task WhenMorePostsParsedThanRequested_ShouldReturnOnlyRequestedNumberOfPosts()
 		{
 			// Arrange 
@@ -194,7 +212,7 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 			await subject.GetTopPostsAsync(_postsPage1.Count + 1);
 
 			// Assert
-			_httpClientServiceMock.Verify(x => x.GetHtmlContentAsync(It.Is<Uri>(uri => IsEqualToPage(uri, 2))));
+			_httpClientServiceMock.Verify(x => x.GetHtmlContentAsync(It.Is<string>(path => IsEqualToPage(path, 2))));
 		}
 
 		[Test]
@@ -209,7 +227,7 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 			await subject.GetTopPostsAsync(_postsPage1.Count + _postsPage2.Count);
 
 			// Assert
-			_httpClientServiceMock.Verify(x => x.GetHtmlContentAsync(It.Is<Uri>(uri => IsEqualToPage(uri, 3))));
+			_httpClientServiceMock.Verify(x => x.GetHtmlContentAsync(It.Is<string>(path => IsEqualToPage(path, 3))));
 		}
 
 		[Test]
@@ -293,11 +311,9 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 			Assert.That(act, Throws.TypeOf<SearchDepthExceededException>());
 		}
 
-		private bool IsEqualToPage(Uri uri, int page)
-			=> uri.AbsoluteUri == BuildPage(page).AbsoluteUri;
+		private bool IsEqualToPage(string path, int page) => path == BuildPage(page);
 
-		private Uri BuildPage(int page)
-			=> new Uri($"https://news.ycombinator.com/news?p={page}");
+		private string BuildPage(int page) => $"/news?p={page}";
 
 		private void AssertPostsMatch(Domain.HackerNews.Post actual, HackerNewsPost expected)
 		{

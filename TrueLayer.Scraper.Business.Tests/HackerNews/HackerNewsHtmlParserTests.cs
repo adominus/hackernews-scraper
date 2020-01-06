@@ -131,19 +131,6 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 			Assert.That(results[2].Points, Is.EqualTo(3));
 		}
 
-		[Test]
-		public void WhenMalformedItemList_ShouldThrowException()
-		{
-			// Arrange 
-			var html = GetResourceFileContents("MalformedItemList.html");
-
-			// Act 
-			TestDelegate act = () => _subject.ParsePosts(html).ToList();
-
-			// Assert
-			Assert.That(act, Throws.TypeOf<Exception>());
-		}
-
 		private static string GetResourceFileContents(string fileName)
 		{
 			var currentDirectory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);

@@ -18,57 +18,39 @@ namespace TrueLayer.Scraper.Business.HackerNews
 			htmlDocument.LoadHtml(html);
 
 			var postsTable = htmlDocument?.DocumentNode?.SelectSingleNode("//table[@class=\"itemlist\"]");
-			var posts = postsTable?.SelectNodes(".//tr[@class=\"athing\"]");
+			var postTableRows = postsTable?.SelectNodes(".//tr[@class=\"athing\"]");
 
-			if (posts == null)
+			if (postTableRows == null)
 			{
 				yield break;
 			}
 
-			foreach (var post in posts)
+			foreach (var postTableRow in postTableRows)
 			{
-				// //cc[preceding-sibling::bb[text()="zz"]]/text()
-				var firstRow = ParseFirstRow(post);
+				var postSiblingRow = postTableRow.SelectSingleNode($"following-sibling::tr");
 
-				var second = post.SelectSingleNode($"following-sibling::tr");
-				//var second = postsTable.SelectSingleNode($".//tr[preceding-sibling::tr[@id = \"{firstRow.Id}\"]]");
-				yield return BuildPostFromRow(post, second);
-			}
+				var (Id, Title, Href, Rank) = ParsePostRow(postTableRow);
+				var (Author, Comments, Points) = ParsePostSiblingRow(postSiblingRow);
 
-			//for (int i = 0; i < rows.Count; i += 2)
-			//{
-			//	if (i + 1 >= rows.Count)
-			//	{
-			//		throw new Exception("Unexpected list format");
-			//	}
-
-			//	yield return BuildPostFromRow(rows[i], rows[i + 1]);
-			//}
-
-			HackerNewsPost BuildPostFromRow(HtmlNode tr1, HtmlNode tr2)
-			{
-				var firstRow = ParseFirstRow(tr1);
-				var secondRow = ParseSecondRow(tr2);
-
-				return new HackerNewsPost
+				yield return new HackerNewsPost
 				{
-					Id = firstRow.Id,
-					Title = firstRow.Title,
-					Href = firstRow.Href,
-					Rank = firstRow.Rank,
-					Author = secondRow.Author,
-					Comments = secondRow.Comments,
-					Points = secondRow.Points
+					Id = Id,
+					Title = Title,
+					Href = Href,
+					Rank = Rank,
+					Author = Author,
+					Comments = Comments,
+					Points = Points
 				};
 			}
 		}
 
-		private (string Id, string Title, string Href, int Rank) ParseFirstRow(HtmlNode tr)
+		private (string Id, string Title, string Href, int Rank) ParsePostRow(HtmlNode tr)
 		{
 			var rankNode = GetRankNode(tr);
 			var titleAnchor = GetTitleAnchor(tr);
 
-			if (rankNode == null || titleAnchor == null )
+			if (rankNode == null || titleAnchor == null)
 			{
 				throw new Exception("Unexpected rank and title format");
 			}
@@ -88,7 +70,7 @@ namespace TrueLayer.Scraper.Business.HackerNews
 			HtmlNode GetTitleAnchor(HtmlNode cell) => cell.SelectSingleNode(".//a[@class=\"storylink\"]");
 		}
 
-		private (string Author, int Comments, int Points) ParseSecondRow(HtmlNode tr)
+		private (string Author, int Comments, int Points) ParsePostSiblingRow(HtmlNode tr)
 		{
 			var scoreNode = GetScoreNode(tr);
 			var authorAnchor = GetAuthorAnchor(tr);

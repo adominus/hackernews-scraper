@@ -18,11 +18,11 @@ namespace TrueLayer.Scraper.Business.HttpClientServices
 			_logger = logger;
 		}
 
-		public async Task<string> GetHtmlContentAsync(Uri uri)
+		public async Task<string> GetHtmlContentAsync(string path)
 		{
 			try
 			{
-				var response = await _httpClient.GetAsync(uri);
+				var response = await _httpClient.GetAsync(path);
 
 				if (response.IsSuccessStatusCode &&
 					string.Compare(response.Content.Headers.ContentType.MediaType, "text/html", true) == 0)
@@ -32,7 +32,7 @@ namespace TrueLayer.Scraper.Business.HttpClientServices
 			}
 			catch (Exception e)
 			{
-				_logger.LogError(e, $"Unable to get content of {uri?.AbsoluteUri}");
+				_logger.LogError(e, $"Unable to get contents of {path}");
 			}
 
 			return null;

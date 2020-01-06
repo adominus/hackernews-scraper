@@ -42,7 +42,8 @@ namespace TrueLayer.Scraper
             services.AddScoped<IHackerNewsPostValidator, HackerNewsPostValidator>();
 
             services.AddScoped<IHttpClientService, HttpClientService>();
-            services.AddHttpClient<IHttpClientService, HttpClientService>();
+            services.AddHttpClient<IHttpClientService, HttpClientService>(httpClientConfig =>
+                httpClientConfig.BaseAddress = new Uri("https://news.ycombinator.com"));
 
             //services.Configure<CrawlerOptions>(hostBuilder.Configuration);
             //services.AddTransient<CrawlerService>();
