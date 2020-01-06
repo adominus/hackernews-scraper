@@ -88,7 +88,17 @@ namespace TrueLayer.Scraper.Business.HackerNews
 				Points = post.Points,
 				Rank = post.Rank,
 				Title = post.Title,
-				Uri = new Uri(post.Href, UriKind.Absolute)
+				Uri = GetUriFromHref(post.Href)
 			};
+
+		private Uri GetUriFromHref(string href)
+		{
+			if (Uri.TryCreate(href, UriKind.Absolute, out Uri absoluteUri))
+			{
+				return absoluteUri;
+			}
+
+			return new Uri(new Uri("https://news.ycombinator.com"), href);
+		}
 	}
 }

@@ -31,7 +31,8 @@ namespace TrueLayer.Scraper.Business.HackerNews
 				return false;
 			}
 
-			if (!Uri.TryCreate(post.Href, UriKind.Absolute, out _))
+			if (!Uri.TryCreate(post.Href, UriKind.Absolute, out _) &&
+				!Uri.TryCreate(post.Href, UriKind.Relative, out _))
 			{
 				return false;
 			}

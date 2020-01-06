@@ -49,6 +49,52 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 		}
 
 		[Test]
+		public void WhenNoComments_ShouldReturnPostWithZeroComments()
+		{
+			// Arrange 
+			var html = GetResourceFileContents("NoComments.html");
+
+			// Act 
+			var result = _subject.ParsePosts(html);
+
+			// Assert
+			Assert.That(result.Count, Is.EqualTo(1));
+
+			var singlePost = result.Single();
+
+			Assert.That(singlePost.Id, Is.EqualTo("21970184"));
+			Assert.That(singlePost.Title, Is.EqualTo("I Do (Hopefully) Fair Performance Reviews for Software Developers"));
+			Assert.That(singlePost.Href, Is.EqualTo("https://blog.pragmaticengineer.com/performance-reviews-for-software-engineers/"));
+			Assert.That(singlePost.Rank, Is.EqualTo(7));
+			Assert.That(singlePost.Author, Is.EqualTo("2bluesc"));
+			Assert.That(singlePost.Comments, Is.EqualTo(0));
+			Assert.That(singlePost.Points, Is.EqualTo(9));
+		}
+
+		[Test]
+		public void WhenNoCommentsAuthorOrPoints_ShouldReturnPostWithZeroCommentsNullAuthorAndNoPoints()
+		{
+			// Arrange 
+			var html = GetResourceFileContents("NoCommentsAuthorOrPoints.html");
+
+			// Act 
+			var result = _subject.ParsePosts(html);
+
+			// Assert
+			Assert.That(result.Count, Is.EqualTo(1));
+
+			var singlePost = result.Single();
+
+			Assert.That(singlePost.Id, Is.EqualTo("21969089"));
+			Assert.That(singlePost.Title, Is.EqualTo("SafetyWing (YC W18) is hiring a head of sales"));
+			Assert.That(singlePost.Href, Is.EqualTo("https://workew.com/job/head-of-sales-safetywing/"));
+			Assert.That(singlePost.Rank, Is.EqualTo(25));
+			Assert.That(singlePost.Author, Is.Null);
+			Assert.That(singlePost.Comments, Is.Zero);
+			Assert.That(singlePost.Points, Is.Zero);
+		}
+
+		[Test]
 		public void WhenMultiplePosts_ShouldReturnExpectedPosts()
 		{
 			// Arrange 

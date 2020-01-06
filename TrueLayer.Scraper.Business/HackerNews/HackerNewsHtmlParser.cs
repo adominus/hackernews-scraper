@@ -18,22 +18,32 @@ namespace TrueLayer.Scraper.Business.HackerNews
 			htmlDocument.LoadHtml(html);
 
 			var postsTable = htmlDocument?.DocumentNode?.SelectSingleNode("//table[@class=\"itemlist\"]");
-			var rows = postsTable?.SelectNodes(".//tr");
+			var posts = postsTable?.SelectNodes(".//tr[@class=\"athing\"]");
 
-			if (rows == null)
+			if (posts == null)
 			{
 				yield break;
 			}
 
-			for (int i = 0; i < rows.Count; i += 2)
+			foreach (var post in posts)
 			{
-				if (i + 1 >= rows.Count)
-				{
-					throw new Exception("Unexpected list format");
-				}
+				// //cc[preceding-sibling::bb[text()="zz"]]/text()
+				var firstRow = ParseFirstRow(post);
 
-				yield return BuildPostFromRow(rows[i], rows[i + 1]);
+				var second = post.SelectSingleNode($"following-sibling::tr");
+				//var second = postsTable.SelectSingleNode($".//tr[preceding-sibling::tr[@id = \"{firstRow.Id}\"]]");
+				yield return BuildPostFromRow(post, second);
 			}
+
+			//for (int i = 0; i < rows.Count; i += 2)
+			//{
+			//	if (i + 1 >= rows.Count)
+			//	{
+			//		throw new Exception("Unexpected list format");
+			//	}
+
+			//	yield return BuildPostFromRow(rows[i], rows[i + 1]);
+			//}
 
 			HackerNewsPost BuildPostFromRow(HtmlNode tr1, HtmlNode tr2)
 			{
@@ -84,26 +94,23 @@ namespace TrueLayer.Scraper.Business.HackerNews
 			var authorAnchor = GetAuthorAnchor(tr);
 			var commentsNode = GetCommentsNode(tr);
 
-			if (scoreNode == null || authorAnchor == null || commentsNode == null)
-			{
-				throw new Exception("Unexpected score, author and comments format");
-			}
-
-			if (!int.TryParse(scoreNode.InnerText.Replace("points", "").Replace("point", ""), out int score))
+			int score = 0;
+			if (scoreNode != null && !int.TryParse(scoreNode.InnerText.Replace("points", "").Replace("point", ""), out score))
 			{
 				throw new Exception("Unable to parse score");
 			}
 
-			if (!int.TryParse(commentsNode.InnerText
+			int comments = 0;
+			if (commentsNode != null && !int.TryParse(commentsNode.InnerText
 					.Replace("comments", "")
 					.Replace("comment", "")
-					.Replace("&nbsp;", ""), out int comments))
+					.Replace("&nbsp;", ""), out comments))
 			{
 				throw new Exception("Unable to parse comments");
 			}
 
 			return (
-				authorAnchor.InnerText.Trim(),
+				authorAnchor?.InnerText.Trim(),
 				comments,
 				score);
 
