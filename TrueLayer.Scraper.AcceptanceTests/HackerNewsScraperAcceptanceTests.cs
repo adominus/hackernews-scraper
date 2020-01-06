@@ -79,7 +79,7 @@ namespace TrueLayer.Scraper.AcceptanceTests
 					.WithBody(fileContent));
 		}
 
-		public static string GetResourceFileContents(string fileName)
+		private static string GetResourceFileContents(string fileName)
         {
             var currentDirectory = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var filePath = System.IO.Path.Combine(currentDirectory, @"Resources", fileName);

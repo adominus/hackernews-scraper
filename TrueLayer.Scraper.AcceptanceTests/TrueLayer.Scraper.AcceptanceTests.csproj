@@ -14,10 +14,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Resources\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\TrueLayer.Scraper.Domain\TrueLayer.Scraper.Domain.csproj" />
   </ItemGroup>
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TrueLayer.Scraper.Business.Exceptions;
 using TrueLayer.Scraper.Business.HttpClientServices;
 using TrueLayer.Scraper.Domain.HackerNews;
 
@@ -11,13 +12,16 @@ namespace TrueLayer.Scraper.Business.HackerNews
 	{
 		private readonly IHttpClientService _httpClientService;
 		private readonly IHackerNewsHtmlParser _hackerNewsHtmlParser;
+		private readonly IHackerNewsPostValidator _hackerNewsPostValidator;
 
 		public HackerNewsScraper(
 			IHttpClientService httpClientService,
-			IHackerNewsHtmlParser hackerNewsHtmlParser)
+			IHackerNewsHtmlParser hackerNewsHtmlParser,
+			IHackerNewsPostValidator hackerNewsPostValidator)
 		{
 			_httpClientService = httpClientService;
 			_hackerNewsHtmlParser = hackerNewsHtmlParser;
+			_hackerNewsPostValidator = hackerNewsPostValidator;
 		}
 
 		public async Task<IEnumerable<Post>> GetTopPostsAsync(int postsCount)
@@ -27,14 +31,29 @@ namespace TrueLayer.Scraper.Business.HackerNews
 				throw new ArgumentOutOfRangeException(nameof(postsCount));
 			}
 
+			var posts = await GetUniquePostsAsync(postsCount);
+
+			return posts
+				.OrderBy(x => x.Rank)
+				.Take(postsCount)
+				.Select(ToPostDomainModel);
+		}
+
+		private async Task<IEnumerable<HackerNewsPost>> GetUniquePostsAsync(int minimumRequiredPosts)
+		{
 			var posts = new List<HackerNewsPost>();
 			var page = 1;
 
-			while (posts.Select(x => x.Id).Distinct().Count() < postsCount)
+			while (!HasEnoughUniquePosts())
 			{
+				if (page > 15)
+				{
+					throw new SearchDepthExceededException();
+				}
+
 				foreach (var post in await GetPostsAsync(page))
 				{
-					if (!posts.Any(x => x.Id == post.Id))
+					if (_hackerNewsPostValidator.IsValid(post) && !posts.Any(x => x.Id == post.Id))
 					{
 						posts.Add(post);
 					}
@@ -43,10 +62,12 @@ namespace TrueLayer.Scraper.Business.HackerNews
 				page++;
 			}
 
-			return posts
-				.OrderBy(x => x.Rank)
-				.Take(postsCount)
-				.Select(ToPostDomainModel);
+			return posts;
+
+			bool HasEnoughUniquePosts() => posts
+				.Select(x => x.Id)
+				.Distinct()
+				.Count() >= minimumRequiredPosts;
 		}
 
 		private async Task<IEnumerable<HackerNewsPost>> GetPostsAsync(int page)
@@ -67,7 +88,7 @@ namespace TrueLayer.Scraper.Business.HackerNews
 				Points = post.Points,
 				Rank = post.Rank,
 				Title = post.Title,
-				Uri = post.Uri
+				Uri = new Uri(post.Href, UriKind.Absolute)
 			};
 	}
 }

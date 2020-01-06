@@ -8,7 +8,7 @@ namespace TrueLayer.Scraper.Business.HackerNews
 
 		public string Title { get; set; }
 
-		public Uri Uri { get; set; }
+		public string Href { get; set; }
 
 		public string Author { get; set; }
 

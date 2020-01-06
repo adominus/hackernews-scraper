@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TrueLayer.Scraper.Business.Exceptions;
 using TrueLayer.Scraper.Business.HackerNews;
 using TrueLayer.Scraper.Business.HttpClientServices;
 
@@ -16,6 +17,7 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 		private IFixture _fixture;
 		private Mock<IHttpClientService> _httpClientServiceMock;
 		private Mock<IHackerNewsHtmlParser> _hackerNewsHtmlParserMock;
+		private Mock<IHackerNewsPostValidator> _hackerNewsPostValidatorMock;
 
 		private string _htmlContentPage1;
 		private List<HackerNewsPost> _postsPage1;
@@ -30,10 +32,22 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 
 			_httpClientServiceMock = _fixture.Freeze<Mock<IHttpClientService>>();
 			_hackerNewsHtmlParserMock = _fixture.Freeze<Mock<IHackerNewsHtmlParser>>();
+			_hackerNewsPostValidatorMock = _fixture.Freeze<Mock<IHackerNewsPostValidator>>();
 		}
 
 		[SetUp]
 		public void SetUp()
+		{
+			_fixture.Register(() => _fixture.Build<HackerNewsPost>()
+				.With(x => x.Href, _fixture.Create<Uri>().AbsoluteUri).Create());
+
+			SetUpMockedPages();
+
+			_hackerNewsPostValidatorMock.Setup(x => x.IsValid(It.IsAny<HackerNewsPost>()))
+				.Returns(true);
+		}
+
+		private void SetUpMockedPages()
 		{
 			_htmlContentPage1 = _fixture.Create<string>();
 			_httpClientServiceMock.Setup(x => x.GetHtmlContentAsync(BuildPage(1)))
@@ -65,6 +79,7 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 		{
 			_httpClientServiceMock.Reset();
 			_hackerNewsHtmlParserMock.Reset();
+			_hackerNewsPostValidatorMock.Reset();
 		}
 
 		[Test]
@@ -91,6 +106,25 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 
 			// Assert
 			_hackerNewsHtmlParserMock.Verify(x => x.ParsePosts(_htmlContentPage1));
+		}
+
+		[Test]
+		public async Task ShouldValidateParsedPosts()
+		{
+			// Arrange 
+			var subject = _fixture.Create<HackerNewsScraper>();
+
+			// Act 
+			await subject.GetTopPostsAsync(1);
+
+			// Assert
+			_hackerNewsPostValidatorMock.Verify(x => x.IsValid(It.IsAny<HackerNewsPost>()),
+				Times.Exactly(_postsPage1.Count));
+
+			foreach (var post in _postsPage1)
+			{
+				_hackerNewsPostValidatorMock.Verify(x => x.IsValid(post));
+			}
 		}
 
 		[Test]
@@ -182,10 +216,10 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 		public async Task WhenDuplicatesFoundBetweenPages_ShouldReturnDeduplicatedPosts()
 		{
 			// Arrange 
-			var expectedPost1 = _fixture.Build<HackerNewsPost>()
-				.With(x => x.Rank, 1).Create();
-			var expectedPost2 = _fixture.Build<HackerNewsPost>()
-				.With(x => x.Rank, 2).Create();
+			var expectedPost1 = _fixture.Create<HackerNewsPost>();
+			expectedPost1.Rank = 1;
+			var expectedPost2 = _fixture.Create<HackerNewsPost>();
+			expectedPost2.Rank = 2;
 
 			_postsPage1.RemoveAll(_ => true);
 			_postsPage2.RemoveAll(_ => true);
@@ -208,17 +242,55 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 		}
 
 		[Test]
-		public async Task WhenPostsNotFoundIn15Pages_ShouldThrowException()
+		public async Task WhenPostsAreInvalid_ShouldSkipPost()
 		{
 			// Arrange 
-			Assert.Fail();
-			//var subject = _fixture.Create<HackerNewsScraper>();
+			_hackerNewsPostValidatorMock.Setup(x => x.IsValid(_postsPage1[0]))
+				.Returns(false);
+			_hackerNewsPostValidatorMock.Setup(x => x.IsValid(_postsPage1[1]))
+				.Returns(false);
+			_hackerNewsPostValidatorMock.Setup(x => x.IsValid(_postsPage1[2]))
+				.Returns(false);
 
-			//// Act 
-			//await subject.GetTopPostsAsync(_postsPage1.Count + 1);
+			var expectedPost = _postsPage2[0];
+			expectedPost.Rank = 1;
+			_postsPage2[1].Rank = 2;
+			_postsPage2[2].Rank = 3;
 
-			//// Assert
-			//_httpClientServiceMock.Verify(x => x.GetHtmlContentAsync(It.Is<Uri>(uri => IsEqualToPage(uri, 2))));
+			var subject = _fixture.Create<HackerNewsScraper>();
+
+			// Act 
+			var result = await subject.GetTopPostsAsync(1);
+
+			// Assert
+			Assert.That(result.Count, Is.EqualTo(1));
+
+			AssertPostsMatch(result.Single(), expectedPost);
+		}
+
+		[Test]
+		public void WhenPostsNotFoundIn15Pages_ShouldThrowException()
+		{
+			// Arrange 
+			var singlePost = _fixture.Create<HackerNewsPost>();
+
+			for (var i = 1; i <= 15; i++)
+			{
+				var htmlContent = _fixture.Create<string>();
+				_httpClientServiceMock.Setup(x => x.GetHtmlContentAsync(BuildPage(1)))
+					.ReturnsAsync(htmlContent);
+
+				_hackerNewsHtmlParserMock.Setup(x => x.ParsePosts(htmlContent))
+					.Returns(new[] { singlePost });
+			}
+
+			var subject = _fixture.Create<HackerNewsScraper>();
+
+			// Act 
+			AsyncTestDelegate act = () => subject.GetTopPostsAsync(15);
+
+			// Assert
+			Assert.That(act, Throws.TypeOf<SearchDepthExceededException>());
 		}
 
 		private bool IsEqualToPage(Uri uri, int page)
@@ -234,7 +306,7 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 			Assert.That(actual.Points, Is.EqualTo(expected.Points));
 			Assert.That(actual.Rank, Is.EqualTo(expected.Rank));
 			Assert.That(actual.Title, Is.EqualTo(expected.Title));
-			Assert.That(actual.Uri, Is.EqualTo(expected.Uri));
+			Assert.That(actual.Uri.AbsoluteUri, Is.EqualTo(expected.Href));
 		}
 	}
 }
