@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "TrueLayer.Scraper": {
+      "commandName": "Project",
+      "commandLineArgs": "--posts 50"
+    }
+  }
+}

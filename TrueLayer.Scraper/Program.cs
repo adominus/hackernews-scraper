@@ -1,11 +1,11 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using System;
 using System.Threading.Tasks;
 using TrueLayer.Scraper.Business.HackerNews;
 using TrueLayer.Scraper.Business.HttpClientServices;
+using TrueLayer.Scraper.Configuration;
+using TrueLayer.Scraper.HttpHandlers;
 
 namespace TrueLayer.Scraper
 {
@@ -22,31 +22,28 @@ namespace TrueLayer.Scraper
 
             var services = serviceScope.ServiceProvider;
 
-            var scraper = services.GetRequiredService<Domain.HackerNews.IHackerNewsScraper>();
-
-            var result = await scraper.GetTopPostsAsync(5);
-
-            var serializerSettings = new JsonSerializerSettings
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
-            };
-
-            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented, serializerSettings));
+            await services.GetRequiredService<ScraperService>()
+                .ScrapeAsync();
         }
 
         private static void ConfigureServices(HostBuilderContext hostBuilder, IServiceCollection services)
         {
+            // Scraper
+            services.AddTransient<PoliteDelegatingHandler>();
+            services.Configure<ScraperOptions>(hostBuilder.Configuration);
+            services.AddTransient<ScraperService>();
+
+            // Scraper.Domain
             services.AddScoped<Domain.HackerNews.IHackerNewsScraper, HackerNewsScraper>();
 
+            // Scraper.Business
             services.AddScoped<IHackerNewsHtmlParser, HackerNewsHtmlParser>();
             services.AddScoped<IHackerNewsPostValidator, HackerNewsPostValidator>();
 
             services.AddScoped<IHttpClientService, HttpClientService>();
             services.AddHttpClient<IHttpClientService, HttpClientService>(httpClientConfig =>
-                httpClientConfig.BaseAddress = new Uri("https://news.ycombinator.com"));
-
-            //services.Configure<CrawlerOptions>(hostBuilder.Configuration);
-            //services.AddTransient<CrawlerService>();
+                httpClientConfig.BaseAddress = new Uri("https://news.ycombinator.com"))
+                .AddHttpMessageHandler<PoliteDelegatingHandler>();
         }
     }
 }
