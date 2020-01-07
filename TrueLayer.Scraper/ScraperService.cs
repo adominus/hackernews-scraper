@@ -23,7 +23,12 @@ namespace TrueLayer.Scraper
 
         public async Task ScrapeAsync()
         {
-            var results = await _hackerNewsScraper.GetTopPostsAsync(_scraperOptions.Posts);
+            if (_scraperOptions.Posts == null)
+            {
+                throw new ArgumentNullException("Please provide a value for posts");
+            }
+
+            var results = await _hackerNewsScraper.GetTopPostsAsync(_scraperOptions.Posts.Value);
 
             var serializerSettings = new JsonSerializerSettings
             {

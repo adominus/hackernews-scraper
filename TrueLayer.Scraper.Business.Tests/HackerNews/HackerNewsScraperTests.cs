@@ -292,15 +292,12 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 			// Arrange 
 			var singlePost = _fixture.Create<HackerNewsPost>();
 
-			for (var i = 1; i <= 15; i++)
-			{
-				var htmlContent = _fixture.Create<string>();
-				_httpClientServiceMock.Setup(x => x.GetHtmlContentAsync(BuildPage(1)))
-					.ReturnsAsync(htmlContent);
+			var htmlContent = _fixture.Create<string>();
+			_httpClientServiceMock.Setup(x => x.GetHtmlContentAsync(It.IsAny<string>()))
+				.ReturnsAsync(htmlContent);
 
-				_hackerNewsHtmlParserMock.Setup(x => x.ParsePosts(htmlContent))
-					.Returns(new[] { singlePost });
-			}
+			_hackerNewsHtmlParserMock.Setup(x => x.ParsePosts(htmlContent))
+				.Returns(new[] { singlePost });
 
 			var subject = _fixture.Create<HackerNewsScraper>();
 
@@ -309,6 +306,22 @@ namespace TrueLayer.Scraper.Business.Tests.HackerNews
 
 			// Assert
 			Assert.That(act, Throws.TypeOf<SearchDepthExceededException>());
+		}
+
+		[Test]
+		public void WhenHttpClientReturnsNull_ShouldThrowException()
+		{
+			// Arrange 
+			_httpClientServiceMock.Setup(x => x.GetHtmlContentAsync(It.IsAny<string>()))
+				.ReturnsAsync((string)null);
+
+			var subject = _fixture.Create<HackerNewsScraper>();
+
+			// Act 
+			AsyncTestDelegate act = () => subject.GetTopPostsAsync(1);
+
+			// Assert
+			Assert.That(act, Throws.TypeOf<Exception>());
 		}
 
 		private bool IsEqualToPage(string path, int page) => path == BuildPage(page);

@@ -74,6 +74,11 @@ namespace TrueLayer.Scraper.Business.HackerNews
 		{
 			var htmlContent = await _httpClientService.GetHtmlContentAsync($"/news?p={page}");
 
+			if (htmlContent == null)
+			{
+				throw new Exception("Unable to access hacker news");
+			}
+
 			return _hackerNewsHtmlParser.ParsePosts(htmlContent);
 		}
 

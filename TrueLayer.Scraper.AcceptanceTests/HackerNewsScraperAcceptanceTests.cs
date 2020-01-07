@@ -122,6 +122,17 @@ namespace TrueLayer.Scraper.AcceptanceTests
 			Assert.That(results[29].Title, Is.EqualTo(expectedLastPostTitle));
 		}
 
+		[Test]
+		public void WhenHackerNewsIsNotResponding_ShouldThrowException()
+		{
+			// Arrange, Act
+			AsyncTestDelegate act = () => _hackerNewsScraper.GetTopPostsAsync(25);
+
+			// Assert
+			Assert.That(act, Throws.TypeOf<Exception>().With.Message.EqualTo("Unable to access hacker news"));
+		}
+
+
 		private void SetupHackerNewsServerResponse(string fileName, int page)
 		{
 			var fileContent = GetResourceFileContents(fileName);

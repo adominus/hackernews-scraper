@@ -2,6 +2,6 @@
 {
 	public class ScraperOptions
 	{
-		public int Posts { get; set; }
+		public int? Posts { get; set; }
 	}
 }
