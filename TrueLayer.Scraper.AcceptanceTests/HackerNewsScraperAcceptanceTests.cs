@@ -11,7 +11,6 @@ using TrueLayer.Scraper.Domain.HackerNews;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
-using WireMock.Settings;
 
 namespace TrueLayer.Scraper.AcceptanceTests
 {
@@ -26,10 +25,7 @@ namespace TrueLayer.Scraper.AcceptanceTests
 		{
 			_fixture = new Fixture();
 
-			_fakeHackerNewsServer = FluentMockServer.Start(new FluentMockServerSettings
-			{
-				Port = 8000
-			});
+			_fakeHackerNewsServer = FluentMockServer.Start();
 		}
 
 		[SetUp]
@@ -42,7 +38,7 @@ namespace TrueLayer.Scraper.AcceptanceTests
 
 			var httpClient = new HttpClient
 			{
-				BaseAddress = new Uri("http://localhost:8000")
+				BaseAddress = new Uri($"http://localhost:{_fakeHackerNewsServer.Ports.First()}")
 			};
 			_fixture.Inject<IHttpClientService>(new HttpClientService(httpClient, null));
 
@@ -59,7 +55,7 @@ namespace TrueLayer.Scraper.AcceptanceTests
 		public async Task WhenRequesting1Post_ShouldReturnTopPost()
 		{
 			// Arrange
-			SetupHackerNewsServer("HackerNews-01.html", 1);
+			SetupHackerNewsServerResponse("HackerNews-01.html", 1);
 
 			// Act
 			var result = await _hackerNewsScraper.GetTopPostsAsync(1);
@@ -77,11 +73,11 @@ namespace TrueLayer.Scraper.AcceptanceTests
 		}
 
 		[Test]
-		public async Task WhenPostDoesNotGetValidated_ShouldNotIncludeItInResults()
+		public async Task WhenPostIsNotValid_ShouldNotIncludeItInResults()
 		{
 			// Arrange
-			// 25. does not meet validation requirements
-			SetupHackerNewsServer("HackerNews-01.html", 1);
+			// Rank 25. does not meet validation requirements
+			SetupHackerNewsServerResponse("HackerNews-01.html", 1);
 
 			// Act
 			var results = (await _hackerNewsScraper.GetTopPostsAsync(25)).ToList();
@@ -97,21 +93,22 @@ namespace TrueLayer.Scraper.AcceptanceTests
 		public async Task WhenPostsDuplicateAcrossPages_ShouldReturnNextMostRankedPosts()
 		{
 			// Arrange
-			// Contains posts: 
-			// 17. Billion-Dollar Weather and Climate Disasters: Time Series 
-			// 22. Managing product requests from customer-facing teams (brettcvz.com)
-			// 26. Credit Cards for Giving 
-			// 27. Ask HN: I've been slacking off at Google for 6 years. How can I stop this?
-			SetupHackerNewsServer("HackerNews-01.html", 1);
+			// HackerNews-01.html Contains posts: 
+			// Rank 17. Billion-Dollar Weather and Climate Disasters: Time Series 
+			// Rank 22. Managing product requests from customer-facing teams 
+			// Rank 26. Credit Cards for Giving 
+			// Rank 27. Ask HN: I've been slacking off at Google for 6 years. How can I stop this?
+			SetupHackerNewsServerResponse("HackerNews-01.html", 1);
 
-			// Top 4 posts are: 
-			// 31. 	Managing product requests from customer-facing teams (brettcvz.com)
-			// 32. Ask HN: I've been slacking off at Google for 6 years. How can I stop this?
-			// 33. Billion-Dollar Weather and Climate Disasters: Time Series 
-			// 34. Credit Cards for Giving 
-			SetupHackerNewsServer("HackerNews-02.html", 2);
+			// HackerNews-02.html Top 4 posts are: 
+			// Rank 31.	Managing product requests from customer-facing teams 
+			// Rank 32. Ask HN: I've been slacking off at Google for 6 years. How can I stop this?
+			// Rank 33. Billion-Dollar Weather and Climate Disasters: Time Series 
+			// Rank 34. Credit Cards for Giving 
+			SetupHackerNewsServerResponse("HackerNews-02.html", 2);
 
-			var expected31stPostTitle = "Airbnb analyses social media to root out people with 'narcissism or psychopathy'";
+			// Rank 35. in HackerNews-02.html: 
+			var expectedLastPostTitle = "Airbnb analyses social media to root out people with 'narcissism or psychopathy'";
 
 			// Act
 			var results = (await _hackerNewsScraper.GetTopPostsAsync(30)).ToList();
@@ -119,10 +116,13 @@ namespace TrueLayer.Scraper.AcceptanceTests
 			// Assert
 			Assert.That(results.Count(), Is.EqualTo(30));
 
-			Assert.That(results.Last().Title, Is.EqualTo(expected31stPostTitle));
+			Assert.That(results[28].Rank, Is.EqualTo(30));
+
+			Assert.That(results[29].Rank, Is.EqualTo(35));
+			Assert.That(results[29].Title, Is.EqualTo(expectedLastPostTitle));
 		}
 
-		private void SetupHackerNewsServer(string fileName, int page)
+		private void SetupHackerNewsServerResponse(string fileName, int page)
 		{
 			var fileContent = GetResourceFileContents(fileName);
 
